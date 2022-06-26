@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { createError } from "../utils/error.js";
 
+
 export const register = async (req, res, next) => {
     try {
 
@@ -15,7 +16,16 @@ export const register = async (req, res, next) => {
         });
 
         await newUser.save();
-        res.status(200).send("User Created");
+
+        const newUser1 = JSON.parse(JSON.stringify(newUser));
+        delete newUser1.password;
+
+        const expiresIn = 60 * 60 * 60;
+        const accessToken = jwt.sign({ id: newUser1._id }, process.env.JWT, {
+          expiresIn: expiresIn
+        });
+        res.status(200).send({ "user": newUser1, "access_token": accessToken, "expires_in": expiresIn });
+        
     }
     catch(err){
         next(err);
@@ -24,24 +34,34 @@ export const register = async (req, res, next) => {
 
 export const login = async (req, res, next) => {
     try {
-        console.log("abc", req.body);
         const user = await User.findOne({ email: req.body.email });
-        console.log(user, "PARWAIZ");
+
         if(!user)
             return next(createError(404, "User Not Found"));
 
         const isPasswordCorrect = await bcrypt.compare(req.body.password, user.password)
-        console.log(isPasswordCorrect);
+
         if(!isPasswordCorrect)
             return next(createError(400, "Wrong Credentials"));
 
-            const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT);
-
-        const { password, isAdmin, ...otherDetails } = user._doc;
-       
-        res.cookie("access_token", token, {httpOnly: true}).status(200).json({ details: { ...otherDetails }, isAdmin });
+            const expiresIn = 24 * 60 * 60;
+            const accessToken = jwt.sign({ id: user._id }, process.env.JWT, {
+              expiresIn: expiresIn
+            });
+            res.status(200).send({ "message": "Successfully Signed In", "access_token": accessToken, "expires_in": expiresIn, user });
     }
     catch(err) {
         next(err);
     }
 };
+
+
+
+// export const logout = async (req, res, next) => {
+//     res.cookie("access_token", null, { expires: new Date(Date.now()), httpOnly: true,});
+
+//     res.status(200).json({
+//         success: true,
+//         message: "Logged Out"
+//     })
+// }

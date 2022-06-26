@@ -10,16 +10,8 @@ const UserSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    country: {
-      type: String,
-      required: true,
-    },
     img: {
       type: String,
-    },
-    city: {
-      type: String,
-      required: true,
     },
     phone: {
       type: String,
